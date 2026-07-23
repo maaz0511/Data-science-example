@@ -1,11 +1,11 @@
 """
 Student Placement Predictor -- Data Science Lifecycle Demo
 ============================================================
-BCA 1st year students ko poora Data Science lifecycle ek real
-use-case (placement prediction) ke through samjhane ke liye bana
-hua Streamlit app.
+A teaching tool for BCA 1st year students to walk through the complete
+Data Science lifecycle using a real-world use case: predicting whether
+a student will get placed.
 
-Run karne ke liye:
+To run:
     pip install -r requirements.txt
     streamlit run app.py
 """
@@ -34,7 +34,7 @@ ALL_FEATURE_CANDIDATES = CONTINUOUS_COLS + BINARY_COLS
 
 
 # ============================================================
-# STAGE 1 : RAW (MESSY) DATA -- jaisa real duniya me milta hai
+# STAGE 1 : RAW (MESSY) DATA -- as it would look in the real world
 # ============================================================
 @st.cache_data
 def generate_raw_data(seed=42):
@@ -51,7 +51,7 @@ def generate_raw_data(seed=42):
     score = (cgpa * 1.2) + (attendance * 0.05) + (projects * 0.8) + (comm * 0.5) - (backlogs * 1.5)
     score += (internship == 'Yes').astype(int) * 2
     score += np.random.normal(0, 2, n)
-    threshold = np.percentile(score, 72)   # ~28% students placed -> imbalance
+    threshold = np.percentile(score, 72)   # ~28% students placed -> class imbalance
     placed = np.where(score > threshold, 'Yes', 'No')
 
     df = pd.DataFrame({
@@ -115,7 +115,7 @@ def encode_data(df):
 
 
 # ============================================================
-# STAGE 5 : FEATURE CONSTRUCTION (naye features banana)
+# STAGE 5 : FEATURE CONSTRUCTION (building new features)
 # ============================================================
 def construct_features(df):
     d = df.copy()
@@ -148,7 +148,7 @@ def select_features(df, candidates, target='Placed', threshold=0.12, min_feature
 
 
 # ============================================================
-# FULL PIPELINE (ek baar chalta hai, cache ho jaata hai)
+# FULL PIPELINE (runs once, cached)
 # ============================================================
 @st.cache_resource
 def run_full_pipeline():
@@ -232,13 +232,28 @@ def predict_new_student(inputs, pipe, model_name):
     return pred, prob
 
 
+@st.cache_data
+def to_csv_bytes(df):
+    return df.to_csv(index=False).encode('utf-8')
+
+
+def download_button_for(df, filename, key):
+    st.download_button(
+        label=f"⬇️ Download this dataset ({len(df)} rows) as CSV",
+        data=to_csv_bytes(df),
+        file_name=filename,
+        mime='text/csv',
+        key=key
+    )
+
+
 # ============================================================
 # APP UI
 # ============================================================
 pipe = run_full_pipeline()
 
 st.title("🎓 Data Science Lifecycle — Student Placement Predictor")
-st.caption("BCA students ke liye ek real-world Data Science project — step-by-step, end to end")
+st.caption("A real-world Data Science project for BCA students — step by step, end to end")
 
 tab1, tab2, tab3 = st.tabs(["📘 Information", "🔄 DS Lifecycle (Step-by-Step)", "🔮 Prediction"])
 
@@ -246,68 +261,70 @@ tab1, tab2, tab3 = st.tabs(["📘 Information", "🔄 DS Lifecycle (Step-by-Step
 # TAB 1 : INFORMATION
 # ------------------------------------------------------------------
 with tab1:
-    st.header("Yeh Project Kya Hai?")
+    st.header("What Is This Project?")
     st.markdown("""
-Socho tum ek **placement cell** mein baithe ho. Har saal sainkdo students aate hain,
-aur tumhe pehle se andaza lagana hai ki **kaun placed hoga aur kaun nahi** — sirf unke
-academic aur skill records dekh kar. Yehi kaam ek **Data Scientist** karta hai:
-purane data se seekh kar, naye data ke liye prediction karta hai.
+Imagine you're sitting in a **placement cell**. Every year hundreds of students walk in,
+and you need to predict in advance **who is likely to get placed and who isn't** — just by
+looking at their academic and skill records. This is exactly what a **Data Scientist** does:
+learn from historical data, then predict on new, unseen data.
 
-Is app mein hum ek **poora Data Science project** live dekhenge — bilkul waise hi jaise
-industry mein hota hai. Socho isse ek **thali banane** jaisa:
+In this app we'll walk through a **complete Data Science project**, live — exactly the way
+it's done in industry. Think of it like **cooking a meal**:
 
-- 🥦 **Raw data** = bazaar se laayi hui sabzi (kuch kharab, kuch mitti lagi hui)
-- 🧼 **Data Cleaning** = sabzi dhona aur kaatna
-- 👀 **EDA** = sabzi ko dekh kar samajhna — kaunsi taazi hai, kitni chahiye
-- 🧂 **Feature Engineering** = masale, seasoning — swaad badhaana
-- 🍳 **Model Building** = khana pakana
-- 🍽️ **Evaluation** = chakh kar dekhna — swaad sahi bana ya nahi
+- 🥦 **Raw data** = vegetables straight from the market (some bruised, some muddy)
+- 🧼 **Data Cleaning** = washing and chopping the vegetables
+- 👀 **EDA** = looking closely to understand freshness and quantities
+- 🧂 **Feature Engineering** = spices and seasoning — enhancing the flavour
+- 🍳 **Model Building** = actually cooking the dish
+- 🍽️ **Evaluation** = tasting it — checking whether it turned out right
     """)
 
-    st.subheader("📊 Dataset ke Columns")
+    st.subheader("📊 Dataset Columns")
     col_info = pd.DataFrame({
         'Column': ['Student_ID', 'CGPA', 'Attendance', 'Projects_Completed',
                    'Internship', 'Backlogs', 'Communication_Skill', 'Placed (Target)'],
-        'Matlab': [
-            'Student ka unique ID',
-            'CGPA (0 se 10 ke beech)',
+        'Meaning': [
+            'Unique ID for the student',
+            'CGPA on a scale of 0 to 10',
             'Attendance percentage (0-100%)',
-            'Kitne mini/major projects banaye',
-            'Internship ki thi ya nahi (Yes/No)',
-            'Kitne backlog/pending papers hain',
-            'Communication skill rating (3 se 10)',
-            'Placed hua ya nahi (Yes/No) — yeh predict karna hai'
+            'Number of mini/major projects completed',
+            'Whether the student did an internship (Yes/No)',
+            'Number of pending/failed papers',
+            'Communication skill rating (3 to 10)',
+            'Whether the student got placed (Yes/No) — this is what we predict'
         ]
     })
     st.table(col_info)
 
-    st.subheader("🔄 Data Science Lifecycle — Ek Nazar Mein")
+    st.subheader("🔄 Data Science Lifecycle — At a Glance")
     st.markdown("""
-| Step | Kya Hota Hai |
+| Step | What Happens |
 |---|---|
-| 1. Data Collection | Real duniya se raw data uthana (aksar messy hota hai) |
-| 2. Data Cleaning | Missing values, duplicates, outliers theek karna |
-| 3. EDA | Data ko charts/stats se samajhna — patterns dhoondhna |
-| 4. Encoding | Text categories (Yes/No) ko numbers mein badalna |
-| 5. Feature Construction | Purane columns se naya useful column banana |
-| 6. Feature Scaling | Sab numbers ko ek jaisi range mein laana |
-| 7. Feature Selection | Sirf useful features rakhna, kamzor hata dena |
-| 8. Imbalance Handling | Agar ek class kam hai, use balance karna |
-| 9. Model Building | Machine learning algorithm ko train karna |
-| 10. Evaluation | Model kitna accurate hai, yeh check karna |
+| 1. Data Collection | Gathering raw data from the real world (often messy) |
+| 2. Data Cleaning | Fixing missing values, duplicates, and outliers |
+| 3. EDA | Understanding the data through charts and statistics |
+| 4. Encoding | Converting text categories (Yes/No) into numbers |
+| 5. Feature Construction | Building new, more useful columns from existing ones |
+| 6. Feature Scaling | Bringing all numeric columns to a common range |
+| 7. Feature Selection | Keeping only the useful features, dropping weak ones |
+| 8. Imbalance Handling | Balancing classes when one class is under-represented |
+| 9. Model Building | Training a machine learning algorithm |
+| 10. Evaluation | Checking how accurate the model actually is |
 
-👉 **Tab 2 mein** har step ke baad dataset kaisa dikhta hai, wo dekho.
-👉 **Tab 3 mein** khud ek naye student ka data daal kar prediction try karo.
+👉 **In Tab 2**, see exactly what the dataset looks like after every single step.
+👉 **In Tab 3**, enter a new student's details yourself and try the prediction.
     """)
-    st.info("⚠️ Teaching note: is demo mein scaler poore dataset par fit kiya gaya hai (samajhne ke liye simple rakha). "
-            "Real production project mein scaler sirf **training data** par fit hota hai, taaki test data ka gyaan model ko pehle se na mil jaaye (isse 'data leakage' kehte hain).")
+    st.info("⚠️ Teaching note: for simplicity, the scaler in this demo is fit on the "
+            "**entire dataset**. In a real production project, the scaler is fit **only on "
+            "the training data**, so the test data stays completely unseen — otherwise you "
+            "risk 'data leakage'.")
 
 # ------------------------------------------------------------------
 # TAB 2 : DS LIFECYCLE STEP BY STEP
 # ------------------------------------------------------------------
 with tab2:
-    stage = st.selectbox("👉 Konsa stage dekhna hai, chuno:", [
-        "1️⃣ Raw Data (Jaisa Mila)",
+    stage = st.selectbox("👉 Choose a stage to explore:", [
+        "1️⃣ Raw Data (As Collected)",
         "2️⃣ Data Cleaning",
         "3️⃣ EDA (Exploratory Data Analysis)",
         "4️⃣ Encoding (Text → Number)",
@@ -322,36 +339,41 @@ with tab2:
     st.divider()
 
     if stage.startswith("1️⃣"):
-        st.subheader("Raw Data — Jaisa Field Se Aaya")
+        st.subheader("Raw Data — Straight From the Field")
         raw = pipe['raw']
-        st.markdown("Yeh data bilkul waisa hi hai jaisa real duniya mein milta hai — **messy**: kuch values missing hain, kuch duplicate rows hain, aur kuch outliers (galat values) bhi hain.")
+        st.markdown("This is exactly how the data looks when it first arrives in the real "
+                    "world — **messy**: some values are missing, some rows are duplicated, "
+                    "and a few are outright outliers.")
         c1, c2, c3 = st.columns(3)
         c1.metric("Total Rows", len(raw))
         c2.metric("Missing Values", int(raw.isna().sum().sum()))
         c3.metric("Duplicate Rows", int(raw.duplicated().sum()))
         st.dataframe(raw, width='stretch')
-        st.caption("Dekho CGPA aur Attendance mein kuch ajeeb values hain (jaise CGPA = 15.5 ya Attendance = -10) — yeh outliers hain, aur kuch cells khaali (NaN) hain.")
+        st.caption("Notice some odd values in CGPA and Attendance (like CGPA = 15.5 or "
+                  "Attendance = -10) — these are outliers, and some cells are blank (NaN).")
+        download_button_for(raw, "1_raw_data.csv", "dl1")
 
     elif stage.startswith("2️⃣"):
-        st.subheader("Data Cleaning ke Baad")
+        st.subheader("After Data Cleaning")
         cleaned, dup_count, fill_info = pipe['cleaned'], pipe['dup_count'], pipe['fill_info']
         st.markdown("""
-**Kya kiya:**
-- Duplicate rows hata diye
-- CGPA ko 0-10 aur Attendance ko 0-100 range mein clip kiya (outliers fix)
-- Missing values ko us column ke **median** se fill kiya (average se better hai jab data mein outliers hon)
+**What was done:**
+- Removed duplicate rows
+- Clipped CGPA to the 0-10 range and Attendance to 0-100 (fixing outliers)
+- Filled missing values using the column's **median** (more robust than mean when outliers exist)
         """)
         c1, c2 = st.columns(2)
-        c1.metric("Duplicates Hataye Gaye", int(dup_count))
-        c2.metric("Rows Ab", len(cleaned))
+        c1.metric("Duplicates Removed", int(dup_count))
+        c2.metric("Rows Now", len(cleaned))
         for col, (n_missing, med) in fill_info.items():
-            st.write(f"• **{col}**: {n_missing} missing values ko **{med}** (median) se fill kiya")
+            st.write(f"• **{col}**: {n_missing} missing values filled with **{med}** (median)")
         st.dataframe(cleaned, width='stretch')
+        download_button_for(cleaned, "2_cleaned_data.csv", "dl2")
 
     elif stage.startswith("3️⃣"):
-        st.subheader("EDA — Data Ko Samajhna")
+        st.subheader("EDA — Understanding the Data")
         cleaned = pipe['cleaned']
-        st.markdown("Ab data saaf hai. Charts aur stats se dekhte hain data mein kya patterns hain.")
+        st.markdown("The data is clean now. Let's use charts and statistics to spot patterns.")
 
         st.write("**Summary Statistics**")
         st.dataframe(cleaned.describe().round(2), width='stretch')
@@ -364,12 +386,13 @@ with tab2:
             ax.set_xlabel("Placed")
             ax.set_ylabel("Count")
             st.pyplot(fig)
-            st.caption("Dekho — 'No' wale students bahut zyada hain 'Yes' se. Yeh hai **imbalanced dataset** ka example.")
+            st.caption("Notice there are far more 'No' students than 'Yes' — this is an "
+                      "**imbalanced dataset**.")
 
         with col2:
             fig, ax = plt.subplots(figsize=(5, 3.5))
             sns.histplot(data=cleaned, x='CGPA', hue='Placed', kde=True, ax=ax, palette=['#e76f51', '#2a9d8f'])
-            ax.set_title("CGPA Distribution (Placed ke hisaab se)")
+            ax.set_title("CGPA Distribution by Placement")
             st.pyplot(fig)
 
         col3, col4 = st.columns(2)
@@ -387,74 +410,79 @@ with tab2:
             sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax, fmt=".2f")
             ax.set_title("Correlation Heatmap")
             st.pyplot(fig)
-            st.caption("Yeh dikhata hai ki kaunse columns ek doosre se juday hue hain.")
+            st.caption("This shows which columns move together.")
 
     elif stage.startswith("4️⃣"):
-        st.subheader("Encoding — Text ko Number Mein Badalna")
+        st.subheader("Encoding — Converting Text to Numbers")
         st.markdown("""
-Machine Learning models sirf **numbers** samajhte hain, text nahi.
-Isliye 'Yes'/'No' wale columns ko 1/0 mein badal diya:
+Machine Learning models only understand **numbers**, not text.
+So the 'Yes'/'No' columns were converted to 1/0:
 - `Internship`: Yes → 1, No → 0
-- `Placed`: Yes → 1, No → 0 (yeh humara target hai)
+- `Placed`: Yes → 1, No → 0 (this is our target variable)
         """)
         st.dataframe(pipe['encoded'], width='stretch')
+        download_button_for(pipe['encoded'], "3_encoded_data.csv", "dl3")
 
     elif stage.startswith("5️⃣"):
-        st.subheader("Feature Construction — Naya Useful Column Banana")
+        st.subheader("Feature Construction — Building New, Useful Columns")
         st.markdown("""
-Kabhi kabhi jo columns humare paas hain unse ek **naya, zyada powerful column** bana sakte hain.
-Yahan humne 2 naye features banaye:
+Sometimes the existing columns can be combined into a **new, more powerful column**.
+Here we built two new features:
 
 - **Overall_Score** = `(CGPA × 4) + (Communication × 2) + (Projects × 3) − (Backlogs × 5)`
-  → Ek single number jo student ki overall strength batata hai
-- **Has_Experience** = 1 agar internship ki hai YA 2+ projects banaye hain, warna 0
-  → Yeh batata hai ki student ke paas practical exposure hai ya nahi
+  → A single number that captures a student's overall strength
+- **Has_Experience** = 1 if the student did an internship OR completed 2+ projects, else 0
+  → Captures whether the student has hands-on practical exposure
         """)
         st.dataframe(pipe['constructed'], width='stretch')
+        download_button_for(pipe['constructed'], "4_constructed_data.csv", "dl4")
 
     elif stage.startswith("6️⃣"):
         st.subheader("Feature Scaling")
         st.markdown("""
-Dekho — CGPA 0-10 ke range mein hai, lekin Attendance 0-100 ke range mein.
-Agar hum inhe aise hi model ko denge, toh model Attendance ko "zyada important" samajh sakta hai
-sirf isliye ki uske numbers bade hain — yeh galat hoga.
+Notice — CGPA ranges from 0-10, but Attendance ranges from 0-100.
+If we feed these as-is into a model, it might treat Attendance as "more important"
+just because its numbers are bigger — which would be misleading.
 
-**Scaling** sab numeric columns ko ek jaisi range mein le aati hai (mean = 0, std = 1),
-taaki har feature ko barabar mauka mile.
+**Scaling** brings all numeric columns onto a common range (mean = 0, std = 1),
+so every feature gets a fair chance to contribute.
 
-*(Note: `Internship` aur `Has_Experience` already 0/1 hain, unhe scale nahi kiya)*
+*(Note: `Internship` and `Has_Experience` are already 0/1, so they weren't scaled)*
         """)
         st.dataframe(pipe['scaled'], width='stretch')
+        download_button_for(pipe['scaled'], "5_scaled_data.csv", "dl5")
 
     elif stage.startswith("7️⃣"):
-        st.subheader("Feature Selection — Sirf Useful Features Rakhna")
+        st.subheader("Feature Selection — Keeping Only What Matters")
         st.markdown("""
-Har feature equally useful nahi hota. Hum dekhte hain ki kaunsa feature `Placed` ke saath
-sabse zyada **correlated** (juda hua) hai, aur kamzor features ko hata dete hain.
-Isse model simple aur accurate dono banta hai.
+Not every feature is equally useful. We check how strongly each feature is
+**correlated** with `Placed`, and drop the weaker ones. This keeps the model
+both simpler and more accurate.
         """)
         corr_df = pipe['corr_series'].reset_index()
         corr_df.columns = ['Feature', 'Correlation with Placed']
         corr_df['Correlation with Placed'] = corr_df['Correlation with Placed'].round(3)
-        corr_df['Selected?'] = corr_df['Feature'].apply(lambda x: '✅ Haan' if x in pipe['selected_features'] else '❌ Nahi')
+        corr_df['Selected?'] = corr_df['Feature'].apply(lambda x: '✅ Yes' if x in pipe['selected_features'] else '❌ No')
         st.dataframe(corr_df, width='stretch')
         st.success(f"**Selected Features:** {', '.join(pipe['selected_features'])}")
 
     elif stage.startswith("8️⃣"):
         st.subheader("Train-Test Split + Imbalance Handling")
         st.markdown("""
-**Train-Test Split**: Data ko 2 hisso mein baanta — 75% **training** ke liye (model isse seekhega)
-aur 25% **testing** ke liye (model ko isse kabhi nahi dikhaya, sirf final check ke liye).
+**Train-Test Split**: The data is split into 2 parts — 75% for **training**
+(the model learns from this) and 25% for **testing** (the model never sees this
+until the final check).
         """)
         c1, c2 = st.columns(2)
         c1.metric("Training Rows", len(pipe['X_train']))
         c2.metric("Testing Rows", len(pipe['X_test']))
 
         st.markdown("""
-**Imbalance Handling**: Yaad hai EDA mein humne dekha tha ki "Placed = Yes" wale students kam hain?
-Agar aise hi model train kiya, toh model hamesha "No" predict karke bhi "accurate" dikhega —
-lekin yeh kaam ka nahi. Isliye humne **training data** mein minority class (Placed) ko
-upsample kiya (repeat karke barabar kiya) — sirf training data mein, test data ko touch nahi kiya.
+**Imbalance Handling**: Recall from the EDA that "Placed = Yes" students were far
+fewer. If trained as-is, the model could just predict "No" every time and still look
+"accurate" — but that's useless. So the **training data** (only the training set,
+never the test set) was rebalanced by upsampling the minority class (repeating rows)
+until both classes were equal in size.
         """)
         col1, col2 = st.columns(2)
         with col1:
@@ -462,23 +490,24 @@ upsample kiya (repeat karke barabar kiya) — sirf training data mein, test data
             labels = ['Not Placed (0)', 'Placed (1)']
             values = [pipe['before_counts'].get(0, 0), pipe['before_counts'].get(1, 0)]
             ax.bar(labels, values, color=['#e76f51', '#2a9d8f'])
-            ax.set_title("Training Set — Pehle")
+            ax.set_title("Training Set — Before")
             st.pyplot(fig)
         with col2:
             fig, ax = plt.subplots(figsize=(4, 3))
             values = [pipe['after_counts'].get(0, 0), pipe['after_counts'].get(1, 0)]
             ax.bar(labels, values, color=['#e76f51', '#2a9d8f'])
-            ax.set_title("Training Set — Baad Mein (Balanced)")
+            ax.set_title("Training Set — After (Balanced)")
             st.pyplot(fig)
 
     elif stage.startswith("9️⃣"):
         st.subheader("Model Training")
         st.markdown("""
-Ab hum 2 alag-alag models train karte hain balanced training data par, taaki compare kar sakein:
+Now we train two different models on the balanced training data, so we can compare:
 
-- **Logistic Regression**: Simple, tez, aur samajhne mein aasan — ek "line" khींchta hai
-  jo Placed/Not-Placed ko separate karti hai.
-- **Random Forest**: Bohot saare "decision trees" ka group — zyada complex patterns pakad sakta hai.
+- **Logistic Regression**: Simple, fast, and easy to interpret — it draws a "line"
+  that separates Placed from Not-Placed.
+- **Random Forest**: A group of many "decision trees" working together — capable of
+  capturing more complex patterns.
         """)
         st.code("""
 log_reg = LogisticRegression(max_iter=1000)
@@ -487,15 +516,18 @@ log_reg.fit(X_train_balanced, y_train_balanced)
 rf = RandomForestClassifier(n_estimators=200, max_depth=6)
 rf.fit(X_train_balanced, y_train_balanced)
         """, language="python")
-        st.success("✅ Dono models train ho chuke hain! Ab 'Evaluation' stage mein dekhte hain kaunsa behtar hai.")
+        st.success("✅ Both models are trained! Head to 'Model Evaluation' to see which one performs better.")
 
     elif stage.startswith("🔟"):
         st.subheader("Model Evaluation")
-        st.markdown("Ab dono models ko **test data** (jo unhone kabhi nahi dekha) par check karte hain.")
+        st.markdown("Now we check both models on the **test data** — data they've never seen before.")
 
+        summary_rows = []
         for name, model in [("Logistic Regression", pipe['log_reg']), ("Random Forest", pipe['rf'])]:
             st.markdown(f"### {name}")
             metrics, cm, fpr, tpr, roc_auc = evaluate_model(model, pipe['X_test'], pipe['y_test'])
+            summary_rows.append({'Model': name, **metrics, 'ROC-AUC': roc_auc})
+
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Accuracy", f"{metrics['Accuracy']*100:.1f}%")
             c2.metric("Precision", f"{metrics['Precision']*100:.1f}%")
@@ -522,22 +554,38 @@ rf.fit(X_train_balanced, y_train_balanced)
                 st.pyplot(fig)
             st.divider()
 
+        st.markdown("### 📋 Model Comparison")
+        summary_df = pd.DataFrame(summary_rows).set_index('Model').round(3)
+        st.dataframe(summary_df, width='stretch')
+        best_model_name = summary_df['F1 Score'].idxmax()
+        st.success(f"Based on F1 Score, **{best_model_name}** performs better on this dataset.")
+
+        st.markdown("### 🔍 Feature Importance (Random Forest)")
+        st.markdown("Random Forest can tell us which features it relied on most when making decisions.")
+        importances = pd.Series(pipe['rf'].feature_importances_, index=pipe['selected_features'])
+        importances = importances.sort_values(ascending=True)
+        fig, ax = plt.subplots(figsize=(6, 3.5))
+        importances.plot(kind='barh', ax=ax, color='#2a9d8f')
+        ax.set_xlabel("Importance")
+        ax.set_title("Which Features Mattered Most?")
+        st.pyplot(fig)
+
         st.markdown("""
-**Metrics samjho:**
-- **Accuracy**: Kul kitne predictions sahi the
-- **Precision**: Jinhe "Placed" predict kiya, unme se kitne sach mein placed the
-- **Recall**: Jo sach mein placed the, unme se kitno ko model ne pakda
-- **F1 Score**: Precision aur Recall ka balance
+**Understanding the metrics:**
+- **Accuracy**: Overall, how many predictions were correct
+- **Precision**: Of everyone predicted "Placed", how many actually were
+- **Recall**: Of everyone who actually got placed, how many did the model catch
+- **F1 Score**: A balance between Precision and Recall
         """)
 
 # ------------------------------------------------------------------
 # TAB 3 : PREDICTION
 # ------------------------------------------------------------------
 with tab3:
-    st.header("🔮 Naye Student Ka Placement Predict Karo")
-    st.markdown("Ek naye student ki details daalo aur dekho model kya predict karta hai.")
+    st.header("🔮 Predict Placement for a New Student")
+    st.markdown("Enter a new student's details and see what the model predicts.")
 
-    model_choice = st.radio("Model chuno:", ["Logistic Regression", "Random Forest"], horizontal=True)
+    model_choice = st.radio("Choose a model:", ["Logistic Regression", "Random Forest"], horizontal=True)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -545,11 +593,11 @@ with tab3:
         attendance_in = st.slider("Attendance (%)", 0.0, 100.0, 78.0, 1.0)
         projects_in = st.slider("Projects Completed", 0, 5, 2)
     with col2:
-        internship_in = st.radio("Internship ki hai?", ["Yes", "No"], horizontal=True)
+        internship_in = st.radio("Did an internship?", ["Yes", "No"], horizontal=True)
         backlogs_in = st.slider("Backlogs", 0, 5, 0)
         comm_in = st.slider("Communication Skill (1-10)", 1, 10, 7)
 
-    if st.button("🎯 Predict Karo", type="primary"):
+    if st.button("🎯 Predict", type="primary"):
         inputs = {
             'CGPA': cgpa_in, 'Attendance': attendance_in, 'Projects_Completed': projects_in,
             'Internship': internship_in, 'Backlogs': backlogs_in, 'Communication_Skill': comm_in
@@ -558,12 +606,15 @@ with tab3:
 
         st.divider()
         if pred == 1:
-            st.success(f"### ✅ Placement Chance: HIGH")
-            st.markdown(f"Model ke hisaab se is student ke **placed hone ka probability: {prob*100:.1f}%**")
+            st.success("### ✅ Placement Chance: HIGH")
+            st.markdown(f"According to the model, this student's **probability of being placed is {prob*100:.1f}%**")
+            st.progress(min(max(prob, 0.0), 1.0))
             st.balloons()
         else:
-            st.error(f"### ❌ Placement Chance: LOW")
-            st.markdown(f"Model ke hisaab se is student ke **placed hone ka probability: {prob*100:.1f}%**")
-            st.markdown("Tip: CGPA badhao, projects karo, ya internship karo — inka positive asar padta hai.")
+            st.error("### ❌ Placement Chance: LOW")
+            st.markdown(f"According to the model, this student's **probability of being placed is {prob*100:.1f}%**")
+            st.progress(min(max(prob, 0.0), 1.0))
+            st.markdown("Tip: improving CGPA, doing more projects, or completing an internship "
+                        "tends to have a positive effect on placement chances.")
 
         st.caption(f"Model used: {model_choice}")
